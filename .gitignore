@@ -1,0 +1,12 @@
+# Only track source files — ignore everything else in the repo.
+/*
+!.gitignore
+!main.ipynb
+!README.md
+
+# (For reference, the ignored artifacts include:)
+#   .venv/                     virtual environment
+#   data/                      CIFAR-10 dataset
+#   *.pth                      model / agent checkpoints
+#   2106.06091v2.pdf           the paper
+#   __pycache__/ .ipynb_checkpoints/  caches
