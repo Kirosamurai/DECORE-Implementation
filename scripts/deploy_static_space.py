@@ -30,7 +30,7 @@ def main():
     args = ap.parse_args()
 
     for f in ("index.html", "app.js", "style.css",
-              "models/baseline.onnx", "models/pruned.onnx"):
+              "models/baseline.onnx", "models/pruned.onnx", "models/pruned.int8.onnx"):
         if not os.path.exists(os.path.join(WEB, f)):
             sys.exit(f"Missing {f} — run `python scripts/export_onnx.py` first.")
 

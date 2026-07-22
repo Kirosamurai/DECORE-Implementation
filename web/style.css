@@ -106,6 +106,13 @@ b { color: var(--ink); }
 .roi-stat.win { border-color: #245; background: #10241c; }
 .roi-stat.win .roi-stat-value { color: var(--win); }
 
+/* DECORE + INT8 (final deliverable) card — matches the pruned/green accent */
+.result-card.int8 { border-color: #245; }
+.result-card.int8 .fill { background: linear-gradient(90deg, var(--win), #7ff0c0); }
+.final { font-size: .6rem; font-weight: 600; color: var(--win); background: #10241c;
+  border: 1px solid #245; padding: 2px 7px; border-radius: 999px; margin-left: 8px;
+  vertical-align: middle; text-transform: uppercase; letter-spacing: .04em; }
+
 footer { margin-top: 28px; color: var(--muted); font-size: .85rem; text-align: center; }
 footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }

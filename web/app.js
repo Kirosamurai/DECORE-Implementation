@@ -15,8 +15,8 @@ ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
 ort.env.wasm.numThreads = 1;
 
 const SESS_OPTS = { executionProviders: ["wasm"], graphOptimizationLevel: "all" };
-let sessBase = null, sessPruned = null, modelsReady = false;
-let loadTimeBase = 0, loadTimePruned = 0; // ms: download + ORT session init + warmup, per model
+let sessBase = null, sessPruned = null, sessInt8 = null, modelsReady = false;
+let loadTimeBase = 0, loadTimePruned = 0, loadTimeInt8 = 0; // ms: download + ORT init + warmup, per model
 const $ = (id) => document.getElementById(id);
 
 function setStatus(msg) { $("status").textContent = msg; }
@@ -56,6 +56,20 @@ async function loadModels() {
     await warmup(sessPruned);
     loadTimePruned = performance.now() - t0;
     $("load-pruned").textContent = `📦 loaded in ${loadTimePruned.toFixed(0)} ms · 21.8 MB`;
+
+    // DECORE + INT8 (the final deliverable). Wrapped separately: if a browser's
+    // WASM build can't run the quantized graph, the other two still work.
+    try {
+      t0 = performance.now();
+      sessInt8 = await ort.InferenceSession.create(`models/pruned.int8.onnx?t=${Date.now()}`, SESS_OPTS);
+      await warmup(sessInt8);
+      loadTimeInt8 = performance.now() - t0;
+      $("load-int8").textContent = `📦 loaded in ${loadTimeInt8.toFixed(0)} ms · 5.5 MB`;
+    } catch (e) {
+      console.error("INT8 model load failed", e);
+      sessInt8 = null;
+      $("load-int8").textContent = "INT8 not supported in this browser";
+    }
 
     modelsReady = true;
     setStatus("Models ready — pick an example or upload an image.");
@@ -203,6 +217,12 @@ async function classify() {
     const inferSpeedup = b.dt / Math.max(p.dt, 1e-3);
     $("lat-base").textContent = `⏱ ${b.dt.toFixed(1)} ms  ·  full model`;
     $("lat-pruned").textContent = `⏱ ${p.dt.toFixed(1)} ms  ·  ${inferSpeedup.toFixed(1)}× faster`;
+    if (sessInt8) {
+      const q = await runSession(sessInt8, input);
+      renderTop1($("top-int8"), q.probs);
+      renderBars($("out-int8"), q.probs);
+      $("lat-int8").textContent = `⏱ ${q.dt.toFixed(1)} ms  ·  INT8, ${(b.dt / Math.max(q.dt, 1e-3)).toFixed(1)}× faster`;
+    }
     renderVerdict(b.probs, p.probs);
     updateRoi();
     setStatus("Both models ran locally in your browser.");
