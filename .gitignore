@@ -1,8 +1,16 @@
-# Only track source files — ignore everything else in the repo.
+# Only track source files — ignore everything else (data, checkpoints, venv, runs).
 /*
 !.gitignore
-!main.ipynb
 !README.md
+!requirements.txt
+!decore/
+!configs/
+!notebooks/
+
+# within tracked dirs, still ignore caches
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
 
 # (For reference, the ignored artifacts include:)
 #   .venv/                     virtual environment

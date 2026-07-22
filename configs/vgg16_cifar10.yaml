@@ -1,0 +1,32 @@
+name: vgg16_cifar10
+seed: 42
+out_dir: runs
+data_root: ./data
+
+arch: vgg16
+dataset: cifar10
+num_classes: 10
+
+batch_size: 256
+baseline_epochs: 160
+num_epochs: 300
+policy_stop_epoch: 260
+
+baseline_lr: 0.1
+decore_lr: 0.1
+agent_lr: 0.05
+momentum: 0.9
+weight_decay: 0.0005
+
+lambda_penalty: 50.0
+prune_threshold: 0.5
+init_weight: 6.9
+
+use_reward_baseline: false
+use_entropy_bonus: false
+entropy_coef: 0.01
+baseline_momentum: 0.9
+
+retrain_baseline: false
+print_every: 5
+num_workers: 0
