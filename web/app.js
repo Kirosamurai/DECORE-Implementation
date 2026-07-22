@@ -15,7 +15,7 @@ ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
 ort.env.wasm.numThreads = 1;
 
 const SESS_OPTS = { executionProviders: ["wasm"], graphOptimizationLevel: "all" };
-let sessBase = null, sessPruned = null;
+let sessBase = null, sessPruned = null, modelsReady = false;
 const $ = (id) => document.getElementById(id);
 
 function setStatus(msg) { $("status").textContent = msg; }
@@ -34,9 +34,9 @@ async function loadModels() {
     // so concurrent run() calls raise "Session already started".
     await warmup(sessBase);
     await warmup(sessPruned);
-    $("run").disabled = false;
-    $("run").textContent = "Classify";
-    setStatus("Models loaded — running locally in your browser.");
+    modelsReady = true;
+    setStatus("Models ready — pick an example or upload an image.");
+    if ($("preview").getAttribute("src")) classify();  // classify a pre-selected image
   } catch (e) {
     setStatus("Failed to load models: " + (e && e.message ? e.message : e));
     console.error(e);
@@ -113,9 +113,8 @@ async function runSession(sess, input) {
 
 let busy = false;
 async function classify() {
-  if (busy || !sessBase || !sessPruned || !$("preview").src) return;
+  if (busy || !modelsReady || !$("preview").getAttribute("src")) return;
   busy = true;
-  $("run").disabled = true;
   setStatus("Running inference…");
   try {
     const input = preprocess();
@@ -134,13 +133,12 @@ async function classify() {
     console.error(e);
   } finally {
     busy = false;
-    $("run").disabled = false;
   }
 }
 
 function loadImageSrc(src) {
   const img = $("preview");
-  img.onload = () => { if (!$("run").disabled) classify(); };
+  img.onload = () => { $("preview-wrap").classList.add("has-img"); classify(); };
   img.src = src;
 }
 
@@ -160,7 +158,6 @@ $("file").addEventListener("change", (e) => {
   const f = e.target.files[0];
   if (f) loadImageSrc(URL.createObjectURL(f));
 });
-$("run").addEventListener("click", classify);
 
 initExamples();
 loadModels();
