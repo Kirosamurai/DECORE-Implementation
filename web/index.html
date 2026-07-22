@@ -56,15 +56,61 @@
         <div id="verdict" class="verdict idle">Pick an image to compare the two models.</div>
         <div class="result-card">
           <div class="card-head"><h3>Full VGG-16</h3><span class="pill">14.7M params</span></div>
+          <div class="meta" id="load-base">Loading…</div>
           <div class="top1" id="top-base">—</div>
           <div id="out-base" class="bars"></div>
           <div class="lat" id="lat-base"></div>
         </div>
         <div class="result-card pruned">
           <div class="card-head"><h3>DECORE-pruned</h3><span class="pill win">5.4M params</span></div>
+          <div class="meta" id="load-pruned">Loading…</div>
           <div class="top1" id="top-pruned">—</div>
           <div id="out-pruned" class="bars"></div>
           <div class="lat" id="lat-pruned"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="roi">
+      <div class="roi-head">
+        <h2>💰 What would this save you?</h2>
+        <p class="sub">
+          Same accuracy, <span id="roi-speedup-label">~2×</span> faster end-to-end, 63% smaller.
+          A model's real-world worth is <b>load time + inference time</b> combined — load is what a
+          cold-starting serverless replica or a first-time visitor pays, inference is what every
+          request pays. Enter your current spend to estimate the impact on your bill.
+        </p>
+      </div>
+      <div class="roi-body">
+        <div class="roi-inputs">
+          <label>
+            Current monthly inference compute spend
+            <div class="roi-input-wrap">
+              <span class="prefix">$</span>
+              <input type="number" id="roi-spend" min="0" step="100" placeholder="10,000" />
+              <span class="suffix">/ month</span>
+            </div>
+          </label>
+          <p class="roi-breakdown" id="roi-breakdown">Load — · Inference — · Total —</p>
+          <p class="roi-hint">
+            Load + inference times are measured live in your browser (from page load and from running
+            an image above). Savings assume compute cost scales with combined load+inference time at
+            constant request volume — a directional estimate, not a quote.
+          </p>
+        </div>
+        <div class="roi-outputs">
+          <div class="roi-stat">
+            <span class="roi-stat-label">Total speedup (load + inference)</span>
+            <span class="roi-stat-value" id="roi-speedup">—</span>
+          </div>
+          <div class="roi-stat win">
+            <span class="roi-stat-label">Est. monthly savings</span>
+            <span class="roi-stat-value" id="roi-monthly">$0</span>
+          </div>
+          <div class="roi-stat win">
+            <span class="roi-stat-label">Est. annual savings</span>
+            <span class="roi-stat-value" id="roi-annual">$0</span>
+          </div>
         </div>
       </div>
     </section>

@@ -16,6 +16,7 @@ ort.env.wasm.numThreads = 1;
 
 const SESS_OPTS = { executionProviders: ["wasm"], graphOptimizationLevel: "all" };
 let sessBase = null, sessPruned = null, modelsReady = false;
+let loadTimeBase = 0, loadTimePruned = 0; // ms: download + ORT session init + warmup, per model
 const $ = (id) => document.getElementById(id);
 
 function setStatus(msg) { $("status").textContent = msg; }
@@ -28,14 +29,37 @@ async function warmup(sess) {
 async function loadModels() {
   try {
     setStatus("Downloading + initializing models (first load only)…");
-    sessBase = await ort.InferenceSession.create("models/baseline.onnx", SESS_OPTS);
-    sessPruned = await ort.InferenceSession.create("models/pruned.onnx", SESS_OPTS);
-    // Run sequentially: the WASM backend is single-threaded / not re-entrant,
-    // so concurrent run() calls raise "Session already started".
+
+    // The FIRST ort.InferenceSession.create() call anywhere pays a one-time
+    // WASM-engine bootstrap cost (instantiating ort's own .wasm binary) that
+    // has nothing to do with model size. Left alone, whichever model loads
+    // first eats that fixed cost and makes the other look unfairly fast, so
+    // we pay it here with a throwaway, cache-busted, untimed load before
+    // timing either real model.
+    const warm = await ort.InferenceSession.create(
+      `models/pruned.onnx?warmup=${Date.now()}`, SESS_OPTS);
+    await warmup(warm);
+
+    // Timed + sequential per model (WASM backend is single-threaded / not
+    // re-entrant, so concurrent run() calls raise "Session already started").
+    // Cache-busted so neither timed load rides on the warm-up fetch's cache.
+    let t0 = performance.now();
+    sessBase = await ort.InferenceSession.create(
+      `models/baseline.onnx?t=${Date.now()}`, SESS_OPTS);
     await warmup(sessBase);
+    loadTimeBase = performance.now() - t0;
+    $("load-base").textContent = `📦 loaded in ${loadTimeBase.toFixed(0)} ms · 58.9 MB`;
+
+    t0 = performance.now();
+    sessPruned = await ort.InferenceSession.create(
+      `models/pruned.onnx?t=${Date.now()}`, SESS_OPTS);
     await warmup(sessPruned);
+    loadTimePruned = performance.now() - t0;
+    $("load-pruned").textContent = `📦 loaded in ${loadTimePruned.toFixed(0)} ms · 21.8 MB`;
+
     modelsReady = true;
     setStatus("Models ready — pick an example or upload an image.");
+    updateRoi();
     if ($("preview").getAttribute("src")) classify();  // classify a pre-selected image
   } catch (e) {
     setStatus("Failed to load models: " + (e && e.message ? e.message : e));
@@ -43,12 +67,20 @@ async function loadModels() {
   }
 }
 
-// Draw the current preview image into the 32x32 canvas and return a CHW tensor.
+// Resize the current preview image into the model's fixed 32x32 input and
+// return a CHW tensor. Uploaded images can be any resolution or aspect ratio
+// (a full-res phone photo, a wide screenshot, ...) — center-crop to a square
+// first, then downscale, so every upload always produces a well-formed
+// 32x32x3 tensor without stretching/distorting it.
 function preprocess() {
   const img = $("preview");
   const canvas = $("canvas");
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, 32, 32);
+  const sw = img.naturalWidth, sh = img.naturalHeight;
+  const side = Math.min(sw, sh);
+  const sx = (sw - side) / 2, sy = (sh - side) / 2;
+  ctx.clearRect(0, 0, 32, 32);
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, 32, 32);
   const { data } = ctx.getImageData(0, 0, 32, 32); // RGBA, HWC
   const arr = new Float32Array(1 * 3 * 32 * 32);
   for (let y = 0; y < 32; y++) {
@@ -111,9 +143,51 @@ async function runSession(sess, input) {
   return { probs: softmax(logits), dt };
 }
 
+// ROI calculator: a model's real-world "worth" is load time (download + init —
+// what a cold-starting serverless/autoscaled replica or a first-time visitor
+// pays) PLUS inference time (what every request pays). Both come from live
+// in-browser measurements (loadModels() and classify()); cost math is a
+// simple "compute-time-proportional" estimate.
+let lastInferBase = 0, lastInferPruned = 0; // ms, most recent classify() run
+let lastSpeedup = 2.0; // sane default (matches README headline) before any run
+const fmtUSD = (n) => "$" + Math.round(n).toLocaleString("en-US");
+const fmtMs = (n) => n.toFixed(0) + " ms";
+
+function updateRoi() {
+  const totalBase = loadTimeBase + lastInferBase;
+  const totalPruned = loadTimePruned + lastInferPruned;
+  lastSpeedup = totalBase / Math.max(totalPruned, 1e-3);
+
+  $("roi-speedup").textContent = `${lastSpeedup.toFixed(2)}×`;
+  $("roi-speedup-label").textContent = `~${lastSpeedup.toFixed(1)}×`;
+  $("roi-breakdown").textContent =
+    `Load ${fmtMs(loadTimeBase)} → ${fmtMs(loadTimePruned)}  ·  ` +
+    `Inference ${fmtMs(lastInferBase)} → ${fmtMs(lastInferPruned)}  ·  ` +
+    `Total ${fmtMs(totalBase)} → ${fmtMs(totalPruned)}`;
+
+  const spend = parseFloat($("roi-spend").value);
+  if (!spend || spend <= 0 || !isFinite(spend)) {
+    $("roi-monthly").textContent = "$0";
+    $("roi-annual").textContent = "$0";
+    return;
+  }
+  const savingsFraction = Math.max(0, 1 - 1 / lastSpeedup);
+  const monthly = spend * savingsFraction;
+  $("roi-monthly").textContent = fmtUSD(monthly);
+  $("roi-annual").textContent = fmtUSD(monthly * 12);
+}
+
+$("roi-spend").addEventListener("input", updateRoi);
+updateRoi();
+
 let busy = false;
 async function classify() {
   if (busy || !modelsReady || !$("preview").getAttribute("src")) return;
+  const img = $("preview");
+  if (!img.naturalWidth || !img.naturalHeight) {
+    setStatus("Couldn't read that image — try a JPG, PNG, or WebP.");
+    return;
+  }
   busy = true;
   setStatus("Running inference…");
   try {
@@ -124,9 +198,13 @@ async function classify() {
     renderTop1($("top-pruned"), p.probs);
     renderBars($("out-base"), b.probs);
     renderBars($("out-pruned"), p.probs);
+    lastInferBase = b.dt;
+    lastInferPruned = p.dt;
+    const inferSpeedup = b.dt / Math.max(p.dt, 1e-3);
     $("lat-base").textContent = `⏱ ${b.dt.toFixed(1)} ms  ·  full model`;
-    $("lat-pruned").textContent = `⏱ ${p.dt.toFixed(1)} ms  ·  ${(b.dt / Math.max(p.dt, 1e-3)).toFixed(1)}× faster`;
+    $("lat-pruned").textContent = `⏱ ${p.dt.toFixed(1)} ms  ·  ${inferSpeedup.toFixed(1)}× faster`;
     renderVerdict(b.probs, p.probs);
+    updateRoi();
     setStatus("Both models ran locally in your browser.");
   } catch (e) {
     setStatus("Inference error: " + (e && e.message ? e.message : e));
@@ -136,10 +214,20 @@ async function classify() {
   }
 }
 
+let lastObjectUrl = null;
 function loadImageSrc(src) {
   const img = $("preview");
   img.onload = () => { $("preview-wrap").classList.add("has-img"); classify(); };
+  img.onerror = () => {
+    $("preview-wrap").classList.remove("has-img");
+    setStatus("Couldn't read that image — try a JPG, PNG, or WebP.");
+  };
   img.src = src;
+  // Release the previous upload's blob URL — a new file:// / example click
+  // means it's no longer referenced, and these otherwise leak for the page's
+  // lifetime.
+  if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+  lastObjectUrl = src.startsWith("blob:") ? src : null;
 }
 
 function initExamples() {
