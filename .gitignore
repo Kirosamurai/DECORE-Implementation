@@ -6,7 +6,13 @@
 !decore/
 !configs/
 !notebooks/
-!demo/
+!scripts/
+!hf/
+!web/
+
+# large model artifacts (regenerate via scripts/export_onnx.py; uploaded to the Space)
+*.onnx
+*.onnx.data
 
 # within tracked dirs, still ignore caches
 __pycache__/

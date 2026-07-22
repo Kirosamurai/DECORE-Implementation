@@ -2,5 +2,11 @@ torch>=2.0
 torchvision>=0.15
 tqdm>=4.60
 pyyaml>=6.0
-gradio>=4.0          # interactive demo (demo/app.py)
 pillow>=9.0
+
+# ONNX export for the in-browser demo (scripts/export_onnx.py)
+onnx>=1.15
+onnxscript>=0.1
+
+# optional: publish model / deploy the static Space
+huggingface_hub>=0.20

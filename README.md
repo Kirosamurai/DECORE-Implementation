@@ -18,14 +18,21 @@ Reproduced on Apple-Silicon MPS. Matches the paper's `DECORE-500` operating poin
 
 **No accuracy loss — it slightly improved.** Exactly the paper's finding: VGG-16 is so over-parameterized for CIFAR-10 that pruning acts as a regularizer. The physically pruned model is **bit-exact** with the masked model (max logit diff `0.0`).
 
-## 🎮 Interactive demo
+## 🎮 Interactive demo (runs in your browser)
 
-An interactive Gradio app classifies an image with **both** the full VGG-16 and the
-DECORE-pruned model, showing params / size / FLOPs / **CPU latency** side-by-side —
-same accuracy, 63% smaller, ~2× faster on CPU.
+Both the full VGG-16 and the DECORE-pruned model run **entirely client-side** via
+[ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) — no server, no GPU.
+Pick/upload an image and both classify it, showing params / size / FLOPs / **live
+latency** side-by-side: same accuracy, 63% smaller, ~2× faster.
 
-- **Live demo:** _deploy to Hugging Face Spaces and paste the URL here_ → `https://huggingface.co/spaces/<your-username>/decore-vgg16`
-- **Run locally:** `python demo/app.py` (see [`demo/README.md`](demo/README.md))
+- **Live demo:** _deploy a free static Space and paste the URL here_ → `https://huggingface.co/spaces/<your-username>/decore-vgg16`
+- **Run locally:** `python scripts/export_onnx.py` then serve `web/` (`python -m http.server -d web 8899` → open `http://localhost:8899`).
+- **Deploy (free, static):**
+  ```bash
+  python scripts/export_onnx.py                                  # -> web/models/*.onnx
+  python scripts/deploy_static_space.py --space-id <user>/decore-vgg16
+  ```
+- **Publish the model** (optional): `python scripts/upload_hf.py --repo-id <user>/decore-vgg16-cifar10` (compressed model + [model card](hf/model_card.md)).
 
 ### What the policy learned
 DECORE concentrates cuts where the redundancy (and the parameters) live — the wide late layers — while barely touching the precious early features:
@@ -77,10 +84,12 @@ DECORE-Implementation/
 │   └── cli.py                    # run / benchmark / export
 ├── configs/vgg16_cifar10.yaml    # one YAML per experiment
 ├── notebooks/vgg16_cifar10.ipynb # annotated, from-scratch walkthrough
-├── demo/                         # interactive Gradio app (compressed vs full)
-│   ├── app.py
-│   ├── examples/                 # sample CIFAR images
-│   └── README.md
+├── web/                          # static in-browser demo (ONNX Runtime Web)
+│   ├── index.html · app.js · style.css
+│   ├── models/                   # exported *.onnx (gitignored; regenerate)
+│   └── examples/
+├── scripts/                      # export_onnx, upload_hf, deploy_static_space
+├── hf/model_card.md              # Hugging Face model card
 ├── paper/                        # the DECORE paper
 ├── requirements.txt
 └── README.md

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DECORE — Compressed vs Full VGG-16 (in browser)</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>DECORE — Compressed vs. Full VGG-16</h1>
+      <p class="sub">
+        Channel pruning with reinforcement learning. Both models run
+        <b>entirely in your browser</b> (ONNX Runtime Web, CPU) — the pruned model is
+        <b>63% smaller</b> with <b>no accuracy loss</b>. CIFAR-10, 10 classes.
+      </p>
+    </header>
+
+    <section class="compare">
+      <table>
+        <thead>
+          <tr><th>Metric</th><th>Full VGG-16</th><th>DECORE-pruned</th><th>Reduction</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Parameters</td><td>14.72 M</td><td>5.43 M</td><td class="win">63.1%</td></tr>
+          <tr><td>Model size (fp32)</td><td>58.9 MB</td><td>21.8 MB</td><td class="win">63.1%</td></tr>
+          <tr><td>FLOPs (MACs)</td><td>313.2 M</td><td>192.0 M</td><td class="win">38.7%</td></tr>
+          <tr><td>Top-1 accuracy</td><td>93.48%</td><td>93.76%</td><td class="win">+0.28%</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="app">
+      <div class="left">
+        <div id="preview-wrap">
+          <img id="preview" alt="preview" />
+          <canvas id="canvas" width="32" height="32" hidden></canvas>
+        </div>
+        <input type="file" id="file" accept="image/*" />
+        <button id="run" disabled>Loading models…</button>
+        <p class="examples-label">Or pick an example:</p>
+        <div id="examples"></div>
+      </div>
+
+      <div class="right">
+        <div class="result-card">
+          <h3>Full VGG-16 <span class="tag">14.7M</span></h3>
+          <div id="out-base" class="bars"></div>
+          <p class="lat" id="lat-base"></p>
+        </div>
+        <div class="result-card">
+          <h3>DECORE-pruned <span class="tag pruned">5.4M</span></h3>
+          <div id="out-pruned" class="bars"></div>
+          <p class="lat" id="lat-pruned"></p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p id="status">Initializing ONNX Runtime Web…</p>
+      <p>DECORE: <a href="https://arxiv.org/abs/2106.06091">arXiv:2106.06091</a> ·
+        Project: <a href="https://github.com/Kirosamurai/DECORE-Implementation">GitHub</a></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
