@@ -6,6 +6,7 @@
 !decore/
 !configs/
 !notebooks/
+!demo/
 
 # within tracked dirs, still ignore caches
 __pycache__/

@@ -2,3 +2,5 @@ torch>=2.0
 torchvision>=0.15
 tqdm>=4.60
 pyyaml>=6.0
+gradio>=4.0          # interactive demo (demo/app.py)
+pillow>=9.0

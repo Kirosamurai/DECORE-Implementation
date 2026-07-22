@@ -18,6 +18,15 @@ Reproduced on Apple-Silicon MPS. Matches the paper's `DECORE-500` operating poin
 
 **No accuracy loss — it slightly improved.** Exactly the paper's finding: VGG-16 is so over-parameterized for CIFAR-10 that pruning acts as a regularizer. The physically pruned model is **bit-exact** with the masked model (max logit diff `0.0`).
 
+## 🎮 Interactive demo
+
+An interactive Gradio app classifies an image with **both** the full VGG-16 and the
+DECORE-pruned model, showing params / size / FLOPs / **CPU latency** side-by-side —
+same accuracy, 63% smaller, ~2× faster on CPU.
+
+- **Live demo:** _deploy to Hugging Face Spaces and paste the URL here_ → `https://huggingface.co/spaces/<your-username>/decore-vgg16`
+- **Run locally:** `python demo/app.py` (see [`demo/README.md`](demo/README.md))
+
 ### What the policy learned
 DECORE concentrates cuts where the redundancy (and the parameters) live — the wide late layers — while barely touching the precious early features:
 
@@ -68,6 +77,10 @@ DECORE-Implementation/
 │   └── cli.py                    # run / benchmark / export
 ├── configs/vgg16_cifar10.yaml    # one YAML per experiment
 ├── notebooks/vgg16_cifar10.ipynb # annotated, from-scratch walkthrough
+├── demo/                         # interactive Gradio app (compressed vs full)
+│   ├── app.py
+│   ├── examples/                 # sample CIFAR images
+│   └── README.md
 ├── paper/                        # the DECORE paper
 ├── requirements.txt
 └── README.md
