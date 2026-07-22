@@ -83,6 +83,26 @@ function renderBars(el, probs) {
   }
 }
 
+function argmax(a) { let b = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[b]) b = i; return b; }
+
+function renderTop1(el, probs) {
+  const i = argmax(probs);
+  el.innerHTML = `<span class="cls-big">${CLASSES[i]}</span>` +
+                 `<span class="conf">${(probs[i] * 100).toFixed(1)}% confident</span>`;
+}
+
+function renderVerdict(pb, pp) {
+  const v = $("verdict");
+  const ib = argmax(pb), ip = argmax(pp);
+  if (ib === ip) {
+    v.className = "verdict agree";
+    v.textContent = `✓ Both agree: ${CLASSES[ib]} — the 63%-smaller model made the same call.`;
+  } else {
+    v.className = "verdict disagree";
+    v.textContent = `△ Disagreement — full: ${CLASSES[ib]}, pruned: ${CLASSES[ip]}.`;
+  }
+}
+
 async function runSession(sess, input) {
   const t0 = performance.now();
   const out = await sess.run({ [sess.inputNames[0]]: input });
@@ -101,11 +121,14 @@ async function classify() {
     const input = preprocess();
     const b = await runSession(sessBase, input);   // sequential (WASM not re-entrant)
     const p = await runSession(sessPruned, input);
+    renderTop1($("top-base"), b.probs);
+    renderTop1($("top-pruned"), p.probs);
     renderBars($("out-base"), b.probs);
     renderBars($("out-pruned"), p.probs);
-    $("lat-base").textContent = `⏱ ${b.dt.toFixed(1)} ms`;
-    $("lat-pruned").textContent = `⏱ ${p.dt.toFixed(1)} ms`;
-    setStatus("Done — both models ran locally in your browser.");
+    $("lat-base").textContent = `⏱ ${b.dt.toFixed(1)} ms  ·  full model`;
+    $("lat-pruned").textContent = `⏱ ${p.dt.toFixed(1)} ms  ·  ${(b.dt / Math.max(p.dt, 1e-3)).toFixed(1)}× faster`;
+    renderVerdict(b.probs, p.probs);
+    setStatus("Both models ran locally in your browser.");
   } catch (e) {
     setStatus("Inference error: " + (e && e.message ? e.message : e));
     console.error(e);

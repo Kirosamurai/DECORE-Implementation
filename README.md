@@ -1,6 +1,10 @@
 # DECORE — Deep Compression with Reinforcement Learning
 
+[![Live Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Live%20Demo-Hugging%20Face%20Space-blue)](https://huggingface.co/spaces/KiroSamurai/decore-vgg16)
+
 A faithful, reproducible implementation of **DECORE** (Alwani, Wang & Madhavan, *CVPR 2022*, [arXiv:2106.06091](https://arxiv.org/abs/2106.06091)) for **structured channel pruning** of CNNs, plus an end-to-end, config-driven pipeline (train → prune → fine-tune → benchmark → export).
+
+**▶ Try it live (runs in your browser):** https://huggingface.co/spaces/KiroSamurai/decore-vgg16
 
 DECORE assigns a lightweight **reinforcement-learning agent to every channel**. Each agent has a *single* learnable weight and decides whether to keep or drop its channel. A tiny policy-gradient (REINFORCE) update — rewarding compression while penalizing accuracy loss — discovers which channels are redundant. The dropped channels are then **physically removed**, producing a genuinely smaller and faster model.
 
@@ -25,7 +29,7 @@ Both the full VGG-16 and the DECORE-pruned model run **entirely client-side** vi
 Pick/upload an image and both classify it, showing params / size / FLOPs / **live
 latency** side-by-side: same accuracy, 63% smaller, ~2× faster.
 
-- **Live demo:** _deploy a free static Space and paste the URL here_ → `https://huggingface.co/spaces/<your-username>/decore-vgg16`
+- **Live demo:** **https://huggingface.co/spaces/KiroSamurai/decore-vgg16** (free static Space, runs in-browser)
 - **Run locally:** `python scripts/export_onnx.py` then serve `web/` (`python -m http.server -d web 8899` → open `http://localhost:8899`).
 - **Deploy (free, static):**
   ```bash
